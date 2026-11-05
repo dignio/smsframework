@@ -79,7 +79,7 @@ class JsonExDecoder(JSONDecoder):
                         o = C()
                     else:
                         # Classes with a constructor
-                        argspec = inspect.getargspec(C.__init__)
+                        argspec = inspect.getfullargspec(C.__init__)
 
                         # Arguments should be named after properties
                         args = [props.pop(a) for a in argspec.args[1:]]  # (self, (....))

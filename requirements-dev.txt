@@ -1,7 +1,14 @@
+pytest==9.0.3
+exdoc==0.1.4.post1
+j2cli==0.3.10
+flask==2.2.5
+werkzeug==2.2.3
+jinja2==3.1.6
+itsdangerous==2.2.0
+click==8.4.2
+markupsafe==2.1.5
+testfixtures==8.3.0
+
+# Not used by v2-server
 wheel
-nose
-exdoc
-j2cli
-flask
 asynctools
-testfixtures

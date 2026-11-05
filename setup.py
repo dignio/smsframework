@@ -29,7 +29,6 @@ setup(
         'async': ['asynctools >= 0.1.3'],
     },
     include_package_data=True,
-    test_suite='nose.collector',
 
     platforms='any',
     classifiers=[
@@ -40,6 +39,7 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.12',
         'Topic :: Software Development :: Libraries :: Python Modules',
     ],
 )

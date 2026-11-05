@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 class MessageStatus(object):
     """ Sent Message Status
@@ -47,7 +47,7 @@ class MessageStatus(object):
             :param meta: Provider-dependent info
         """
         self.msgid = msgid
-        self.rtime = rtime or datetime.utcnow()
+        self.rtime = rtime or datetime.now(timezone.utc).replace(tzinfo=None)
         self.meta = meta or {}
 
     @property
