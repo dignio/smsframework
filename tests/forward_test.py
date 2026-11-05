@@ -1,19 +1,15 @@
 import unittest
-import time
 import threading
 from datetime import datetime
 
-from flask import Flask, request
+from flask import Flask
+from werkzeug.serving import make_server
 
 from smsframework import Gateway, exc
 from smsframework.providers import ForwardClientProvider, ForwardServerProvider, LoopbackProvider
 from smsframework import OutgoingMessage, IncomingMessage
 from smsframework.providers.forward.provider import jsonex_dumps, jsonex_loads
 
-try:  # Py3
-    from urllib.request import urlopen, Request
-except ImportError:  # Py2
-    from urllib2 import urlopen, Request
 
 
 
@@ -21,65 +17,55 @@ except ImportError:  # Py2
 class ForwardProviderTest(unittest.TestCase):
     """ Test ForwardClientProvider and ForwardServerProvider """
 
-    def _runFlask(self, gw, port):
+    def _makeServer(self):
+        """ Create a Flask app served by a Werkzeug server on a free local port
+
+        :rtype: (flask.Flask, werkzeug.serving.BaseWSGIServer)
         """
-        :param gw: Gateway
-        :type gw: smsframework.Gateway.Gateway
-        :return:
-        :rtype:
-        """
-        # Init flask
         app = Flask(__name__)
         app.debug = True
         app.testing = True
+        server = make_server('localhost', 0, app, threaded=False, passthrough_errors=True)
+        return app, server
 
-        # Register gateway receivers
+    def _startServer(self, app, server, gw):
+        """ Register gateway receivers on the app and serve it in a thread
+
+        :type gw: smsframework.Gateway.Gateway
+        """
         gw.receiver_blueprints_register(app, prefix='/sms')
-
-        # Stop manually
-        @app.route('/kill', methods=['GET','POST'])
-        def kill():
-            func = request.environ.get('werkzeug.server.shutdown')
-            if func is None:
-                raise RuntimeError('Not running with the Werkzeug Server')
-            func()
-            return ''
-
-        # Run
-        app.run('0.0.0.0', port, threaded=False, use_reloader=False, passthrough_errors=True)
+        thread = threading.Thread(target=server.serve_forever)
+        thread.start()
+        return thread
 
     def setUp(self):
+        # Init servers first: ports are allocated dynamically
+        app_client, self.srv_client = self._makeServer()
+        app_server, self.srv_server = self._makeServer()
+
         # Init: client gateway
         # This "client" sends messages through a remote server
         self.gw_client = Gateway()
-        self.gw_client.add_provider('fwd', ForwardClientProvider, server_url='http://a:b@localhost:5001/sms/fwd')
+        self.gw_client.add_provider('fwd', ForwardClientProvider, server_url='http://a:b@localhost:{}/sms/fwd'.format(self.srv_server.port))
 
         # Init: server gateway
         # This "server" receives messages from an external SMS server and forwards them to the client
         self.gw_server = Gateway()
         self.gw_server.add_provider('lo', LoopbackProvider)
-        self.gw_server.add_provider('fwd', ForwardServerProvider, clients=['http://a:b@localhost:5000/sms/fwd'])
+        self.gw_server.add_provider('fwd', ForwardServerProvider, clients=['http://a:b@localhost:{}/sms/fwd'.format(self.srv_client.port)])
         self.lo = self.gw_server.get_provider('lo')  # This is run in another thread, but we should have access to it
         ' :type: LoopbackProvider '
 
-        # Run client in a thread
-        self.t_client = threading.Thread(target=self._runFlask, args=(self.gw_client, 5000))
-        self.t_client.start()
-
-        # Run server in a thread
-        self.t_server = threading.Thread(target=self._runFlask, args=(self.gw_server, 5001))
-        self.t_server.start()
-
-        # Give Flask some time to initialize
-        time.sleep(0.5)
+        # Run client & server in threads
+        self.t_client = self._startServer(app_client, self.srv_client, self.gw_client)
+        self.t_server = self._startServer(app_server, self.srv_server, self.gw_server)
 
     def tearDown(self):
-        # Kill threads
-        for port, thread in ((5000, self.t_client), (5001, self.t_server)):
-            #try:
-            response = urlopen(Request('http://localhost:{}/kill'.format(port)))
-            #except RemoteDisconnected: pass
+        # Stop servers & threads
+        for server, thread in ((self.srv_client, self.t_client), (self.srv_server, self.t_server)):
+            server.shutdown()
             thread.join()
+            server.server_close()
 
     def test_jsonex(self):
         """ Test de/coding messages """

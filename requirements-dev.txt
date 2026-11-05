@@ -1,5 +1,5 @@
 wheel
-nose
+pytest
 exdoc
 j2cli
 flask

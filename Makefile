@@ -22,7 +22,7 @@ publish: README.rst
 
 .PHONY: test test-tox test-docker test-docker-2.6
 test:
-	@nosetests
+	@pytest tests/
 test-tox:
 	@tox
 test-docker:

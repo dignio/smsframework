@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from ..lib import digits_only
 
 
@@ -31,7 +31,7 @@ class IncomingMessage(object):
         self.src = digits_only(src)
         self.body = body
         self.dst = digits_only(dst) if dst else None
-        self.rtime = rtime or datetime.utcnow()
+        self.rtime = rtime or datetime.now(timezone.utc).replace(tzinfo=None)
         self.meta = meta or {}
 
     def __repr__(self):
