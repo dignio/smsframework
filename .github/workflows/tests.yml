@@ -17,6 +17,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      # Match the Flask/Werkzeug versions used by v2-server
-      - run: pip install -e . -r requirements-dev.txt "flask==2.2.5" "werkzeug==2.2.3"
+      - run: pip install -e . -r requirements-dev.txt
       - run: pytest tests/
